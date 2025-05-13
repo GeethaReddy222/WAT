@@ -1,46 +1,173 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const mongoose = require('mongoose');
+const mongoose=require("mongoose")
 const Student = require("../models/Student");
-const Faculty = require('../models/Faculty');
+const WatSubmission=require('../models/WatSubmission');
 const { authorizeRole } = require("../middleware/authorizeRole");
-const verifyToken = require("../middleware/verifyToken"); // You need this middleware to get req.user
+
+const authenticateToken = require("../middleware/authenticateToken");
 
 const router = express.Router();
 
+// ✅ Login-protected route
+router.get("/login", authorizeRole("student"), (req, res) => {
+  res.json({ message: `Welcome, Student ${req.user.id}` });
+});
+
 // ✅ Student Registration Route
+// router.post("/register", async (req, res) => {
+//   const {
+//     name,
+//     email,
+//     password,
+//     year,
+//     semester,
+//     section,
+//     studentId,
+//     rollNumber,
+//     phone,
+//   } = req.body;
+
+//   try {
+//     const existingStudent = await Student.findOne({ email });
+//     if (existingStudent) {
+//       return res.status(400).json({ message: "Email already registered" });
+//     }
+
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+//     const student = new Student({
+//       name,
+//       email,
+//       password: hashedPassword,
+//       year,
+//       semester,
+//       section,
+//       studentId,
+//       rollNumber,
+//       phone,
+//     });
+
+//     await student.save();
+//     res.status(201).json({ message: "Student registration successful" });
+//   } catch (error) {
+//     console.error("Registration Error:", error);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// });
 router.post("/register", async (req, res) => {
-  const { name, email, password, year, semester, section, studentId, rollNumber, phone } = req.body;
+  const {
+    name,
+    email,
+    password,
+    year,
+    semester,
+    section,
+    studentId,
+    rollNumber,
+    phone,
+  } = req.body;
 
   try {
-    const existingStudent = await Student.findOne({ email });
-    if (existingStudent) {
-      return res.status(400).json({ message: "Email already registered" });
+    // Enhanced validation
+    if (!name || !email || !password || !year || !semester || !studentId || !section) {
+      return res.status(400).json({ 
+        success: false,
+        message: "All fields are required",
+        missingFields: [
+          !name && "name",
+          !email && "email",
+          !password && "password",
+          !year && "year",
+          !semester && "semester",
+          !section && "section",
+          !studentId && "studentId"
+        ].filter(Boolean)
+      });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Validate email format
+    if (!/^rr\d{6}@rguktrkv\.ac\.in$/i.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Email must be in format rrXXXXXX@rguktrkv.ac.in"
+      });
+    }
 
+    // Validate student ID format
+    if (!/^R\d{6}$/i.test(studentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Student ID must be in format RXXXXXX"
+      });
+    }
+
+    // Check for existing student
+    const existingStudent = await Student.findOne({ 
+      $or: [{ email }, { studentId }, { rollNumber }] 
+    });
+    
+    if (existingStudent) {
+      let conflictField = "";
+      if (existingStudent.email === email) conflictField = "Email";
+      else if (existingStudent.studentId === studentId) conflictField = "Student ID";
+      else if (existingStudent.rollNumber === rollNumber) conflictField = "Roll Number";
+      
+      return res.status(400).json({ 
+        success: false,
+        message: `${conflictField} already registered`
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Create new student
     const student = new Student({
       name,
-      email,
+      email: email.toLowerCase(), // normalize email
       password: hashedPassword,
       year,
       semester,
       section,
       studentId,
-      rollNumber,
-      phone,
+      rollNumber: Number(rollNumber),
+      phone
     });
 
     await student.save();
-    res.status(201).json({ message: "Student registration successful" });
+    
+    res.status(201).json({ 
+      success: true,
+      message: "Student registration successful",
+      data: {
+        id: student._id,
+        studentId: student.studentId,
+        email: student.email
+      }
+    });
+    
   } catch (error) {
     console.error("Registration Error:", error);
-    res.status(500).json({ message: "Server error" });
+    
+    // Mongoose validation error
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error",
+      error: error.message 
+    });
   }
 });
-
 // ✅ Student Login Route
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
@@ -83,87 +210,181 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// ✅ Protected Welcome Route after login (token-based)
-router.get("/welcome", verifyToken, authorizeRole("student"), (req, res) => {
-  res.json({ message: `Welcome, Student ${req.user.studentId}` });
-});
 
-// ✅ Get Logged-in Student Profile
-router.get("/profile", verifyToken, authorizeRole("student"), async (req, res) => {
+
+router.get('/profile', authenticateToken, async (req, res) => {
   try {
-    const student = await Student.findById(req.user.studentId).select("-password");
+    const studentId = req.user.id; // assuming token payload contains { id, name, ... }
+    const student = await Student.findById(studentId).select('-password'); // avoid sending password
     if (!student) {
-      return res.status(404).json({ message: "Student not found" });
+      return res.status(404).json({ message: 'Admin not found' });
     }
     res.json(student);
-  } catch (error) {
-    console.error("Profile Fetch Error:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// ✅ Update Profile Route
-router.put("/update-profile", verifyToken, authorizeRole("student"), async (req, res) => {
-  try {
-    const updatedFields = req.body;
-    const student = await Student.findByIdAndUpdate(
-      req.user.studentId,
-      updatedFields,
-      { new: true, runValidators: true }
-    ).select("-password");
-
-    if (!student) {
-      return res.status(404).json({ message: "Student not found" });
-    }
-
-    res.json({ message: "Profile updated", student });
-  } catch (error) {
-    console.error("Profile Update Error:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// ✅ Logout Route (optional – frontend should just remove token)
-router.post("/logout", (req, res) => {
-  res.json({ message: "Logout successful" });
-});
-
-// ✅ Get Student by ID
-router.get('/student/:id', async (req, res) => {
-  const studentId = req.params.id;
-
-  if (!mongoose.Types.ObjectId.isValid(studentId)) {
-    return res.status(400).json({ message: 'Invalid student ID' });
-  }
-
-  try {
-    const student = await Student.findById(studentId);
-    if (!student) {
-      return res.status(404).json({ message: 'Student not found' });
-    }
-    res.status(200).json(student);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error fetching student' });
+    console.error('Error fetching admin profile:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// ✅ Get Students by Year
-router.get('/year/:year', async (req, res) => {
-  const { year } = req.params;
-
+router.put("/update", authenticateToken, authorizeRole('student'), async (req, res) => {
   try {
-    const students = await Student.find({ year });
-    res.json({ students });
+    console.log('Received update request:', req.body);
+    console.log('Authenticated user ID:', req.user.id);
+
+    const { name, email, phone, rollNumber, year, semester, section } = req.body;
+    const studentId = req.user.id;
+
+    // Validation
+    if (!name || !email || !phone) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Name, email and phone are required" 
+      });
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email format"
+      });
+    }
+
+    if (!/^\d{10,15}$/.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid phone number (10-15 digits required)"
+      });
+    }
+
+    const existingStudent = await Student.findOne({ email, _id: { $ne: studentId } });
+    if (existingStudent) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already in use by another student"
+      });
+    }
+
+    const updatedStudent = await Student.findByIdAndUpdate(
+      studentId,
+      { 
+        name, 
+        email, 
+        phone,
+        rollNumber,
+        year,
+        semester,
+        section
+      },
+      { new: true, runValidators: true }
+    ).select('-password');
+    console.log("updated data",updatedStudent);
+    if (!updatedStudent) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Student not found" 
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      student: updatedStudent
+    });
+
+  } catch (error) {
+    console.error("Profile update error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+});
+
+
+// Get students by year and section
+router.get('/api/students', async (req, res) => {
+  try {
+    const { year, section } = req.query;
+    
+    if (!year || !section) {
+      return res.status(400).json({ 
+        error: 'Both year and section parameters are required' 
+      });
+    }
+
+    const students = await Student.find({ 
+      year: year.toUpperCase(), 
+      section: section.toUpperCase() 
+    })
+    .sort({ rollNumber: 1 })
+    .select('name rollNumber studentId email year section');
+
+    res.json(students);
   } catch (error) {
     console.error('Error fetching students:', error);
-    res.status(500).json({ message: 'Server Error' });
+    res.status(500).json({ error: 'Server error while fetching students' });
   }
 });
 
-// ✅ Get student details with WAT marks
-router.get('/:studentId/wat-marks', async (req, res) => {
+
+
+// GET /students?year=E1&section=A
+router.get('/', async (req, res) => {  // Note: just '/' because prefix is already "/students"
   try {
+    const { year, section } = req.query;
+    
+    if (!year || !section) {
+      return res.status(400).json({ 
+        error: 'Both year and section parameters are required' 
+      });
+    }
+
+    const students = await Student.find({ 
+      year: year.toUpperCase(), 
+      section: section.toUpperCase() 
+    }).sort('rollNumber');
+
+    res.json(students);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+// get students count
+router.get('/students/count', async (req, res) => {
+  try {
+    const { year, section } = req.query;
+    
+    if (!year || !section) {
+      return res.status(400).json({ message: 'Year and section are required' });
+    }
+
+    const count = await Student.countDocuments({ 
+      year: year.toUpperCase(), 
+      section: section.toUpperCase() 
+    });
+
+    res.json({ count });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+
+// Get student details with WAT marks by year
+router.get('/:studentId', async (req, res) => {
+  try {
+    // Validate studentId
+    if (!mongoose.Types.ObjectId.isValid(req.params.studentId)) {
+      return res.status(400).json({ error: 'Invalid student ID format' });
+    }
+
+    // Get student basic info
     const student = await Student.findById(req.params.studentId)
       .select('-password -createdAt -updatedAt -__v');
 
@@ -171,8 +392,8 @@ router.get('/:studentId/wat-marks', async (req, res) => {
       return res.status(404).json({ message: 'Student not found' });
     }
 
-    // Aggregation example (assuming you have WatSubmission model)
-    const submissions = await WatSubmission.aggregate([
+    // Get WAT submissions grouped by year
+    const submissionsByYear = await WatSubmission.aggregate([
       { $match: { studentId: mongoose.Types.ObjectId(req.params.studentId) } },
       {
         $lookup: {
@@ -184,25 +405,65 @@ router.get('/:studentId/wat-marks', async (req, res) => {
       },
       { $unwind: '$watDetails' },
       {
-        $project: {
-          _id: 1,
-          score: 1,
-          submittedAt: 1,
-          subject: '$watDetails.subject',
-          watTitle: '$watDetails.title',
-          totalMarks: '$watDetails.totalMarks'
+        $group: {
+          _id: '$watDetails.year',
+          submissions: {
+            $push: {
+              _id: '$_id',
+              score: '$score',
+              totalQuestions: { $size: '$watDetails.questions' },
+              submittedAt: '$submittedAt',
+              subject: '$watDetails.subject',
+              watNumber: '$watDetails.watNumber',
+              semester: '$watDetails.semester'
+            }
+          }
         }
-      }
+      },
+      {
+        $project: {
+          year: '$_id',
+          submissions: 1,
+          _id: 0
+        }
+      },
+      { $sort: { year: 1 } } // Sort by year ascending
     ]);
 
+    // Transform data for easier frontend consumption
+    const watMarksByYear = submissionsByYear.reduce((acc, yearData) => {
+      acc[yearData.year] = yearData.submissions;
+      return acc;
+    }, {});
+
     res.json({
-      ...student._doc,
-      watMarks: submissions
+      ...student.toObject(),
+      watMarksByYear
     });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error fetching student details:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 module.exports = router;
+
+

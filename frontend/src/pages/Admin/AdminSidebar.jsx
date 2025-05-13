@@ -1,6 +1,14 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FaUserCircle, FaEdit, FaSignOutAlt, FaTachometerAlt, FaBars } from 'react-icons/fa';
+import { 
+  FaUserCircle, 
+  FaEdit, 
+  FaSignOutAlt, 
+  FaTachometerAlt, 
+  FaBars,
+  FaUsers,
+  FaChalkboardTeacher
+} from 'react-icons/fa';
 
 export default function AdminSidebar({ sidebarOpen, setSidebarOpen }) {
   const navigate = useNavigate();
@@ -21,7 +29,9 @@ export default function AdminSidebar({ sidebarOpen, setSidebarOpen }) {
   const navItems = [
     { label: 'Admin', icon: <FaTachometerAlt />, path: '/admin-dashboard' },
     { label: 'Profile', icon: <FaUserCircle />, path: '/admin/profile' },
-    { label: 'Update Profile', icon: <FaEdit />, path: '/admin/update-profile' }
+    { label: 'Update Profile', icon: <FaEdit />, path: '/admin/update-profile' },
+    { label: 'Manage Students', icon: <FaUsers />, path: '/admin/students' },
+    { label: 'Manage Faculty', icon: <FaChalkboardTeacher />, path: '/admin/faculty' }
   ];
 
   return (

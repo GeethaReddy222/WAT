@@ -21,7 +21,7 @@ export default function UpdateProfile() {
     const fetchAdminData = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:5000/admin/profile', {
+        const res = await axios.get('http://localhost:4000/admin/profile', {
           headers: { Authorization: `Bearer ${token}` },
         });
 

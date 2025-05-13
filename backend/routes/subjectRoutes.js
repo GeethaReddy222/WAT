@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Subject = require('../models/Subjects');
+// const authenticateToken = require('../middleware/authenticateToken');
+const verifyToken = require('../middleware/verifyToken');
 
 // POST: Add subjects
 router.post('/add', async (req, res) => {
@@ -34,4 +36,51 @@ router.get('/:year/:semester', async (req, res) => {
   }
 });
 
+
+// PUT: Update subjects for specific year and semester
+router.put('/:year/:semester', async (req, res) => {
+  try {
+    const { year, semester } = req.params;
+    const { subjects } = req.body;
+
+    // Validate input
+    if (!year || !semester || !Array.isArray(subjects)) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Year, semester and subjects array are required' 
+      });
+    }
+
+    const updated = await Subject.findOneAndUpdate(
+      { year, semester },
+      { subjects },
+      { new: true, upsert: true }
+    );
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Subjects updated successfully',
+      data: updated
+    });
+
+  } catch (error) {
+    console.error('Update error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error during update',
+      error: error.message 
+    });
+  }
+});
+
+router.get('/', async (req, res) => {
+  try {
+    const subjects = await Subject.find({});
+    res.json(subjects);
+  } catch (error) {
+    console.error('Error fetching subjects:', error);
+    res.status(500).json({ message: 'Error fetching subjects', error: error.message });
+  }
+});
 module.exports = router;
+
