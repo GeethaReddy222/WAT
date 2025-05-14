@@ -13,7 +13,7 @@ const subjectSchema = new mongoose.Schema({
   },
   subjects: [
     {
-      code: { type: String },  
+      code: { type: String ,required:true},  
       name: { type: String, required: true }   
     }
   ]

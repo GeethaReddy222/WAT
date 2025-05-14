@@ -20,7 +20,7 @@ export default function StudentSidebar({ sidebarOpen, setSidebarOpen }) {
     if (confirmLogout) {
       localStorage.removeItem('student');
       localStorage.removeItem('token');
-      navigate('/student-login');
+      navigate('/');
     }
   };
 
@@ -29,7 +29,8 @@ export default function StudentSidebar({ sidebarOpen, setSidebarOpen }) {
     { label: 'Student', icon: <FaTachometerAlt />, path: '/student-dashboard' },
     { label: 'Profile', icon: <FaUserCircle />, path: '/student/profile' },
     { label: 'Update Profile', icon: <FaEdit />, path: '/student/update-profile' },
-    { label: 'View WATs', icon: <FaClipboardList />, path: '/student/wats' }
+    { label: 'View WATs', icon: <FaClipboardList />, path: '/student/wats' },
+    { label: 'View WATs Marks', icon: <FaClipboardList />, path: '/student/wat-marks' }
   ];
 
   return (

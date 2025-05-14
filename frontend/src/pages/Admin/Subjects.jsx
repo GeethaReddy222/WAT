@@ -21,7 +21,7 @@ export default function Subjects() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/subjects/add', {
+      await axios.post('http://localhost:4000/api/subjects/add', {
         year,
         semester,
         subjects,

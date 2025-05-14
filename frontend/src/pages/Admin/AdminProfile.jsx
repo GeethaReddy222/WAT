@@ -19,7 +19,7 @@ export default function AdminProfile() {
     }
 
     axios
-      .get('http://localhost:5000/admin/profile', {
+      .get('http://localhost:4000/admin/profile', {
         headers: {
           Authorization: `Bearer ${token}`,
         },

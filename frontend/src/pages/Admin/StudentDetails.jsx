@@ -1,134 +1,159 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { FaUserGraduate, FaBook, FaChartBar, FaIdCard, FaPhone, FaEnvelope, FaCalendarAlt } from 'react-icons/fa';
+import { Table, Select, Spin, message, Typography, Card, Space } from 'antd';
+const { Title, Text } = Typography;
+const { Option } = Select;
 
 const StudentDetails = () => {
-  const { studentId } = useParams();
-  const [student, setStudent] = useState(null);
-  const [watMarks, setWatMarks] = useState([]);
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
+  const [selectedYear, setSelectedYear] = useState('all');
+  const [availableYears, setAvailableYears] = useState([]);
 
   useEffect(() => {
-    const fetchStudentData = async () => {
+    const fetchAllStudents = async () => {
       try {
-        // Fetch student details
-        const studentRes = await axios.get(`http://localhost:5000/student/${studentId}`);
-        setStudent(studentRes.data);
-        console.log(studentRes.data)
-
-        // Fetch WAT marks
-        const watRes = await axios.get(`http://localhost:5000/api/wats/submit/${studentId}`);
-        setWatMarks(watRes.data);
+        setLoading(true);
+        const response = await axios.get('http://localhost:4000/student/all');
+        console.log("res", response.data.students);
+        setStudents(response.data.students);
         
-        setLoading(false);
+        // Extract unique years from student data
+        const years = [...new Set(response.data.students.map(student => student.year))].sort();
+        setAvailableYears(years);
       } catch (err) {
-        setError(err.response?.data?.message || 'Error fetching student data');
+        console.error('Error fetching students:', err);
+        setError('Failed to load student data');
+        message.error('Failed to load students');
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchStudentData();
-  }, [studentId]);
+    fetchAllStudents();
+  }, []);
 
-  if (loading) return <div className="text-center py-8">Loading...</div>;
-  if (error) return <div className="text-center py-8 text-red-500">{error}</div>;
-  if (!student) return <div className="text-center py-8">Student not found</div>;
+  // Filter students based on selected year
+  const filteredStudents = selectedYear === 'all' 
+    ? students 
+    : students.filter(student => student.year === selectedYear);
+
+  // Columns for students table
+  const studentColumns = [
+    {
+      title: 'Student ID',
+      dataIndex: 'studentId',
+      key: 'studentId',
+      sorter: (a, b) => a.studentId.localeCompare(b.studentId),
+    },
+    {
+      title: 'Name',
+      dataIndex: 'name',
+      key: 'name',
+      sorter: (a, b) => a.name.localeCompare(b.name),
+      render: (text, record) => (
+        <a href={`/students/${record._id}`}>{text}</a>  // Fixed: Added backticks
+      ),
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+    },
+    {
+      title: 'Roll Number',
+      dataIndex: 'rollNumber',
+      key: 'rollNumber',
+      sorter: (a, b) => a.rollNumber.localeCompare(b.rollNumber),
+    },
+    {
+      title: 'Year',
+      dataIndex: 'year',
+      key: 'year',
+      filters: availableYears.map(year => ({ text: year, value: year })),
+      onFilter: (value, record) => record.year === value,
+    },
+    {
+      title: 'Semester',
+      dataIndex: 'semester',
+      key: 'semester',
+      render: semester => semester ? semester.replace('sem', 'Semester ') : 'N/A',
+    },
+    {
+      title: 'Section',
+      dataIndex: 'section',
+      key: 'section',
+    },
+    {
+      title: 'Phone',
+      dataIndex: 'phone',
+      key: 'phone',
+    },
+    {
+      title: 'WAT Submissions',
+      key: 'watCount',
+      render: (_, record) => record.watMarks ? record.watMarks.length : 0,
+      sorter: (a, b) => (a.watMarks?.length || 0) - (b.watMarks?.length || 0),
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: '24px' }}>
+        <Text type="danger">{error}</Text>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-center mb-8">Student Details</h1>
-      
-      {/* Student Information Card */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <div className="flex items-center mb-6">
-          <div className="bg-blue-100 p-4 rounded-full mr-4">
-            <FaUserGraduate className="text-blue-600 text-2xl" />
+    <div style={{ padding: '24px' }}>
+      <Card title="All Students" style={{ marginBottom: '24px' }}>
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <Title level={4} style={{ margin: 0 }}>Student Records</Title>
+            <Select
+              defaultValue="all"
+              style={{ width: 200 }}
+              onChange={setSelectedYear}
+            >
+              <Option value="all">All Years</Option>
+              {availableYears.map(year => (
+                <Option key={year} value={year}>Year {year}</Option>
+              ))}
+            </Select>
           </div>
-          <div>
-            <h2 className="text-2xl font-bold">{student.name}</h2>
-            <p className="text-gray-600">{student.studentId}</p>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="flex items-center">
-            <FaIdCard className="text-gray-500 mr-2" />
-            <span className="font-semibold">Roll No:</span>
-            <span className="ml-2">{student.rollNumber}</span>
-          </div>
-          
-          <div className="flex items-center">
-            <FaCalendarAlt className="text-gray-500 mr-2" />
-            <span className="font-semibold">Year:</span>
-            <span className="ml-2">{student.year}</span>
-          </div>
-          
-          <div className="flex items-center">
-            <FaBook className="text-gray-500 mr-2" />
-            <span className="font-semibold">Section:</span>
-            <span className="ml-2">{student.section}</span>
-          </div>
-          
-          <div className="flex items-center">
-            <FaBook className="text-gray-500 mr-2" />
-            <span className="font-semibold">Semester:</span>
-            <span className="ml-2">{student.semester}</span>
-          </div>
-          
-          <div className="flex items-center">
-            <FaEnvelope className="text-gray-500 mr-2" />
-            <span className="font-semibold">Email:</span>
-            <span className="ml-2">{student.email}</span>
-          </div>
-          
-          <div className="flex items-center">
-            <FaPhone className="text-gray-500 mr-2" />
-            <span className="font-semibold">Phone:</span>
-            <span className="ml-2">{student.phone}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* WAT Performance Section */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-2xl font-bold mb-6 flex items-center">
-          <FaChartBar className="mr-2 text-blue-600" />
-          WAT Performance
-        </h2>
-        
-        {watMarks.length === 0 ? (
-          <p className="text-gray-500">No WAT submissions found</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="py-3 px-4 text-left">Subject</th>
-                  <th className="py-3 px-4 text-left">WAT Title</th>
-                  <th className="py-3 px-4 text-left">Date</th>
-                  <th className="py-3 px-4 text-left">Score</th>
-                  <th className="py-3 px-4 text-left">Percentage</th>
-                </tr>
-              </thead>
-              <tbody>
-                {watMarks.map((wat, index) => (
-                  <tr key={wat._id} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
-                    <td className="py-3 px-4">{wat.subject}</td>
-                    <td className="py-3 px-4">{wat.watTitle}</td>
-                    <td className="py-3 px-4">{new Date(wat.submittedAt).toLocaleDateString()}</td>
-                    <td className="py-3 px-4">{wat.score}/{wat.totalMarks}</td>
-                    <td className="py-3 px-4">
-                      {((wat.score / wat.totalMarks) * 100).toFixed(2)}%
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+          <Table
+            columns={studentColumns}
+            dataSource={filteredStudents}
+            rowKey="_id"
+            pagination={{ pageSize: 10 }}
+            scroll={{ x: true }}
+            bordered
+            summary={() => (
+              <Table.Summary fixed>
+                <Table.Summary.Row>
+                  <Table.Summary.Cell index={0} colSpan={5}>
+                    <Text strong>Total Students:</Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={1}>
+                    <Text strong>{filteredStudents.length}</Text>
+                  </Table.Summary.Cell>
+                </Table.Summary.Row>
+              </Table.Summary>
+            )}
+          />
+        </Space>
+      </Card>
     </div>
   );
 };

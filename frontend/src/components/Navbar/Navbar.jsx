@@ -3,7 +3,6 @@ import { Link, useLocation} from 'react-router-dom';
 import { 
   FaHome, 
   FaInfoCircle, 
-  FaTachometerAlt, 
   FaSignInAlt, 
   FaUserPlus,
   FaUserGraduate,
@@ -11,7 +10,7 @@ import {
   FaUserShield,
   FaCalendarAlt
 } from 'react-icons/fa';
-import { FiLogOut } from 'react-icons/fi';
+
 import logo from '../../assets/logo.png';
 import WAT_ABSTRACT from '../../assets/WAT_ABSTRACT.pdf';
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaBars, FaUserGraduate, FaClipboardList, FaPlusCircle } from 'react-icons/fa';
@@ -15,24 +16,25 @@ export default function Faculty() {
     }
   }, []);
 
+  // Reordered cards as requested
   const cards = [
-    {
-      title: 'Student Details',
-      description: 'View year-wise student data and assigned subjects.',
-      icon: <FaUserGraduate className="text-3xl text-blue-600 mb-2" />,
-      onClick: () => navigate('/faculty/students'),
+      {
+      title: 'Create WAT',
+      description: 'create a new wat by usig syllubus.',
+      icon: <FaPlusCircle className="text-3xl text-purple-600 mb-2" />,
+      onClick: () => navigate('/faculty/mcqs'),
     },
     {
       title: 'View WATs',
       description: 'View all active WATs.',
       icon: <FaClipboardList className="text-3xl text-green-600 mb-2" />,
-      onClick: () => navigate('/faculty/view-wats'),
+      onClick: () => navigate('/faculty/view-wats'), // Updated path
     },
     {
-      title: 'Create WAT',
-      description: 'Start a new Weekly Assessment Test for your class.',
-      icon: <FaPlusCircle className="text-3xl text-purple-600 mb-2" />,
-      onClick: () => navigate('/create-wat'),
+      title: 'Student Details',
+      description: 'View year-wise student data .',
+      icon: <FaUserGraduate className="text-3xl text-blue-600 mb-2" />,
+      onClick: () => navigate('/faculty/students-details'), // Updated path
     },
   ];
 

@@ -67,12 +67,25 @@ const StudentRegister = () => {
     e.preventDefault();
     if (validate()) {
       try {
-        const response = await axios.post("http://localhost:5000/student/register", formData);
-        console.log("Registration successful", response.data);
-        navigate("/login"); // ✅ Redirect to login page
+        const response = await axios.post(
+          "http://localhost:4000/student/register", 
+          formData,
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        if (response.data.message === "Student registration successful") {
+          console.log("Registration successful", response.data);
+          navigate("/login");
+        } else {
+          throw new Error(response.data.message || "Registration failed");
+        }
       } catch (err) {
-        console.error("Registration failed:", err);
-        alert("Registration failed. Please try again.");
+        console.error("Registration failed:", err.response?.data || err.message);
+        alert(err.response?.data?.message || "Registration failed. Please try again.");
       }
     }
   };
