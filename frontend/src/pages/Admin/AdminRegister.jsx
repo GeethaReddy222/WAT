@@ -24,7 +24,6 @@ const AdminRegister = () => {
       ...prev,
       [name]: value
     }));
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -37,25 +36,25 @@ const AdminRegister = () => {
     const newErrors = {};
     
     if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
+      newErrors.name = "*Name is required";
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
+      newErrors.email = "*Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email is invalid";
+      newErrors.email = "*Email is invalid";
     }
 
     if (!formData.password.trim()) {
-      newErrors.password = "Password is required";
+      newErrors.password = "*Password is required";
     } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+      newErrors.password = "*Password must be at least 6 characters";
     }
 
     if (!formData.contact.trim()) {
-      newErrors.contact = "Contact number is required";
+      newErrors.contact = "*Contact number is required";
     } else if (!/^\d{10}$/.test(formData.contact)) {
-      newErrors.contact = "Contact number must be 10 digits";
+      newErrors.contact = "*Contact number must be 10 digits";
     }
 
     setErrors(newErrors);
@@ -92,134 +91,140 @@ const AdminRegister = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100 p-4">
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row">
+    <div className="flex items-center justify-center min-h-[90vh] bg-gradient-to-br from-blue-50 to-gray-100 p-4">
+      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row" style={{ maxHeight: '700px' }}>
         {/* Left Side - Welcome Section */}
-        <div className="w-full md:w-1/2 bg-gradient-to-br from-blue-600 to-blue-800 p-8 text-white flex flex-col items-center justify-center">
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FaUserShield className="text-blue-600 text-3xl" />
-            </div>
-            <h1 className="text-3xl font-bold mb-2">Admin Registration</h1>
-           
+        <div className="w-full md:w-1/2 bg-gradient-to-br from-blue-600 to-blue-800 p-6 text-white flex flex-col items-center justify-center">
+          <div className="text-center mb-4">
+            <h1 className="text-2xl font-bold">Welcome</h1>
+            <p className="text-blue-100 text-sm">Administrator Registration</p>
           </div>
           
           <img 
             src={adminRegisterImage} 
             alt="Admin registration" 
-            className="w-64 h-64 object-cover mb-8 rounded-lg shadow-lg border-4 border-white transform hover:scale-105 transition duration-300"
+            className="w-48 h-48 object-contain mb-4 rounded-lg shadow-lg border-4 border-white hover:scale-105 transition-transform duration-300"
           />
           
-          <p className="text-center text-blue-100">
+          <p className="text-center text-blue-100 text-sm">
             Already have an account?{' '}
-            <Link 
-              to="/login" 
-              className="font-semibold text-white hover:underline transition"
-            >
-              Login here
+            <Link to="/login" className="font-semibold text-white hover:underline transition-all">
+              Login
             </Link>
           </p>
         </div>
 
         {/* Right Side - Registration Form */}
-        <div className="w-full md:w-1/2 p-8 md:p-10 flex flex-col justify-center">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {errors.server && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                {errors.server}
-              </div>
-            )}
+        <div className="w-full md:w-1/2 p-6 md:p-8 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="text-center mb-4">
+            <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+              <FaUserShield className="text-blue-500 text-xl" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-800">Admin Registration</h2>
+          </div>
 
-            {successMessage && (
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                {successMessage}
-              </div>
-            )}
+          {errors.server && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded text-sm mb-4">
+              {errors.server}
+            </div>
+          )}
 
+          {successMessage && (
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded text-sm mb-4">
+              {successMessage}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-3">
             {/* Name Field */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Full Name:
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name:</label>
               <input
-                id="name"
                 type="text"
                 name="name"
-                placeholder="Enter name"
+                placeholder="Your full name"
                 value={formData.name}
                 onChange={handleChange}
-                className={`w-full px-4 py-3 rounded-lg border ${errors.name ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
+                className={`w-full px-3 py-2 text-sm rounded-lg border ${
+                  errors.name ? 'border-red-500 animate-shake' : 'border-gray-300'
+                } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
               />
-              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+              {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
             </div>
 
             {/* Email Field */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address:
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email:</label>
               <input
-                id="email"
                 type="email"
                 name="email"
-                placeholder="admin@gmail.com"
+                placeholder="admin@example.com"
                 value={formData.email}
                 onChange={handleChange}
-                className={`w-full px-4 py-3 rounded-lg border ${errors.email ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
+                className={`w-full px-3 py-2 text-sm rounded-lg border ${
+                  errors.email ? 'border-red-500 animate-shake' : 'border-gray-300'
+                } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
               />
-              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+              {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
             </div>
 
             {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password:
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password:</label>
               <div className="relative">
                 <input
-                  id="password"
                   type={showPassword ? "text" : "password"}
                   name="password"
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 rounded-lg border ${errors.password ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
+                  className={`w-full px-3 py-2 text-sm rounded-lg border ${
+                    errors.password ? 'border-red-500 animate-shake' : 'border-gray-300'
+                  } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 text-sm"
                 >
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
-              {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+              {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
             </div>
 
             {/* Contact Field */}
             <div>
-              <label htmlFor="contact" className="block text-sm font-medium text-gray-700 mb-1">
-                Contact Number:
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number:</label>
               <input
-                id="contact"
                 type="text"
                 name="contact"
-                placeholder="9876543210"
+                placeholder="10 digit phone number"
                 value={formData.contact}
                 onChange={handleChange}
-                className={`w-full px-4 py-3 rounded-lg border ${errors.contact ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
+                className={`w-full px-3 py-2 text-sm rounded-lg border ${
+                  errors.contact ? 'border-red-500 animate-shake' : 'border-gray-300'
+                } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
               />
-              {errors.contact && <p className="mt-1 text-sm text-red-600">{errors.contact}</p>}
+              {errors.contact && <p className="mt-1 text-xs text-red-600">{errors.contact}</p>}
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
+              className={`w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all ${
+                isLoading ? 'opacity-75 cursor-not-allowed' : 'hover:translate-y-[-1px] hover:shadow-md'
+              }`}
             >
-              {isLoading ? 'Creating Account...' : 'Register'}
+              {isLoading ? (
+                <span className="flex items-center justify-center">
+                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                  Registering...
+                </span>
+              ) : (
+                'Register'
+              )}
             </button>
           </form>
         </div>

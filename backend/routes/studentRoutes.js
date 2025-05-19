@@ -451,19 +451,33 @@ router.get('/:studentId', async (req, res) => {
 });
 
 
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+    res.status(200).json({ success: true, data: student });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
 
 
 
-
-
-
-
-
-
-
-
-
+// Get student's WAT submissions 
+router.get('/submissions/:studentId', authenticateToken, async (req, res) => {
+  try {
+    const submissions = await WatSubmission.find({ studentId: req.params.studentId })
+      .populate('watId', 'subject watNumber year semester startTime endTime');
+    
+    res.status(200).json(submissions);
+  } catch (error) {
+    console.error('Error fetching submissions:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 module.exports = router;
-
 

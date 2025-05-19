@@ -351,6 +351,7 @@ router.get('/by-year-subject', authenticateToken, async (req, res) => {
     });
   }
 });
+
 // Update WAT with MCQs and syllabus
 router.put('/:id', authenticateToken, async (req, res) => {
         
@@ -422,5 +423,63 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 
+// Add this to your existing watRoutes.js
+router.get('/submissions/student/:studentId', async (req, res) => {
+  try {
+    const { studentId } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({ error: 'Invalid student ID format' });
+    }
+
+    const submissions = await WatSubmission.find({ studentId })
+      .select('watId -_id');
+
+    res.status(200).json(submissions);
+  } catch (error) {
+    console.error('Error fetching student submissions:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+
+// Get WAT details by ID
+router.get('/wat/:id', authenticateToken, async (req, res) => {
+  try {
+    const wat = await WAT.findById(req.params.id);
+    if (!wat) {
+      return res.status(404).json({ success: false, message: 'WAT not found' });
+    }
+    res.json({ success: true, data: wat });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Get all submissions for a WAT with student details
+router.get('/wat-submissions/:watId', authenticateToken, async (req, res) => {
+  try {
+    const submissions = await WatSubmission.find({ watId: req.params.watId })
+      .populate('studentId', 'studentId name rollNumber email') 
+      .lean();
+    
+    
+    const results = submissions.map(sub => ({
+      _id: sub._id,
+      score: sub.score,
+      studentId:sub.studentId.studentId,
+      rollNumber: sub.studentId.rollNumber,
+      studentName: sub.studentId.name,
+      email: sub.studentId.email,
+      submittedAt: sub.submittedAt
+    }));
+    console.log(results);
+    res.json({ success: true, data: results });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 module.exports = router;

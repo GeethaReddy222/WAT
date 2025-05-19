@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import FacultySidebar from './FacultySidebar'; // Assuming faculty also uses the admin sidebar
+import FacultySidebar from './FacultySidebar';
 import { FaBars } from 'react-icons/fa';
 
 export default function FacultyProfile() {
@@ -25,6 +25,7 @@ export default function FacultyProfile() {
         },
       })
       .then((response) => {
+        console.log('Faculty data:', response.data); // Debug
         setFaculty(response.data);
         setLoading(false);
       })
@@ -37,6 +38,16 @@ export default function FacultyProfile() {
         setLoading(false);
       });
   }, []);
+
+  // Group subjects by year
+  const groupSubjectsByYear = (assignedSubjects = []) => {
+    const grouped = {};
+    assignedSubjects.forEach(({ year, subject }) => {
+      if (!grouped[year]) grouped[year] = [];
+      grouped[year].push(subject);
+    });
+    return grouped;
+  };
 
   return (
     <div className="h-screen flex flex-col bg-gray-100">
@@ -71,13 +82,13 @@ export default function FacultyProfile() {
               <p className="mt-2 text-gray-600">Email: {faculty?.email}</p>
               <p className="mt-2 text-gray-600">Contact: {faculty?.contact}</p>
               <p className="mt-2 text-gray-600 mr-5">Assigned subjects:</p>
+
               {/* Assigned Years and Subjects */}
               <div className="mt-4 w-full max-w-xl text-center">
-                {faculty?.subjects && Object.entries(faculty.subjects).length > 0 ? (
-                  Object.entries(faculty.subjects).map(([yearSem, subjects]) => {
-                    const [year] = yearSem.split('-');
-                    return (
-                      <div key={yearSem} className="mb-4">
+                {faculty?.assignedSubjects && faculty.assignedSubjects.length > 0 ? (
+                  Object.entries(groupSubjectsByYear(faculty.assignedSubjects)).map(
+                    ([year, subjects]) => (
+                      <div key={year} className="mb-4">
                         <div className="flex justify-center gap-2 w-full">
                           <div className="text-center">
                             <span className="font-semibold text-blue-600">{year}:</span>
@@ -85,14 +96,14 @@ export default function FacultyProfile() {
                           <div className="flex flex-col items-center">
                             {subjects.map((subject, index) => (
                               <div key={index} className="text-gray-600">
-                                {typeof subject === 'object' ? subject.name : subject}
+                                {subject}
                               </div>
                             ))}
                           </div>
                         </div>
                       </div>
-                    );
-                  })
+                    )
+                  )
                 ) : (
                   <p className="text-gray-500">No assigned subjects found.</p>
                 )}
