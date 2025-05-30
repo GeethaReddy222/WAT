@@ -73,7 +73,7 @@ require("dotenv").config();
 const generateMcqsFromSyllabus = async (req, res) => {
 
   try {
-    const {syllabus,watId, count = 5 } = req.body;
+    const {syllabus,watId, count = 10 } = req.body;
 
     if (!watId || !syllabus) {
       return res.status(400).json({ error: "watId and syllabus are required." });

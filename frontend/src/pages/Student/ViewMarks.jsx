@@ -30,32 +30,19 @@ export default function ViewMarks() {
           }
         );
         
-        // Log raw data for debugging
-        console.log('Raw API response:', res.data);
-        
         // Filter out invalid submissions
         const validSubmissions = res.data.filter(sub => {
-          const isValid = (
+          return (
             typeof sub.score === 'number' && 
             typeof sub.totalQuestions === 'number' &&
             sub.watDetails?.subject &&
             sub.watDetails?.watNumber
           );
-          
-          if (!isValid) {
-            console.warn('Invalid submission filtered out:', sub);
-          }
-          return isValid;
         });
         
-        console.log('Valid submissions:', validSubmissions);
         setSubmissions(validSubmissions);
       } catch (err) {
-        console.error('Error fetching submissions:', {
-          message: err.message,
-          response: err.response?.data,
-          stack: err.stack
-        });
+        console.error('Error fetching submissions:', err);
         setError(err.response?.data?.error || 'Failed to fetch results. Please try again later.');
       } finally {
         setLoading(false);
@@ -68,24 +55,17 @@ export default function ViewMarks() {
   const organizeResults = () => {
     const subjectMap = {};
     
-    // First, collect all unique WAT numbers from submissions
-    const allWatNumbers = Array.from(
-      new Set(
-        submissions.flatMap(sub => 
-          sub.watDetails.watNumber ? [sub.watDetails.watNumber] : []
-        )
-      )
-    ).sort((a, b) => a - b); // Sort numerically
-
+    // Process each submission
     submissions.forEach(submission => {
       const { subject, watNumber } = submission.watDetails;
+      const percentage = Math.round((submission.score / submission.totalQuestions) * 10);
       
       // Initialize subject if not exists
       if (!subjectMap[subject]) {
         subjectMap[subject] = {
           subject,
           wats: {},
-          totalPossible: 0
+          percentages: []
         };
       }
       
@@ -93,22 +73,30 @@ export default function ViewMarks() {
       subjectMap[subject].wats[watNumber] = {
         score: submission.score,
         total: submission.totalQuestions,
-        percentage: Math.round((submission.score / submission.totalQuestions) * 10)
+        percentage: percentage
       };
+      
+      // Store percentage for average calculation
+      subjectMap[subject].percentages.push(percentage);
     });
 
-    // Calculate best 3 averages
+    // Calculate best 3 averages for each subject
     Object.values(subjectMap).forEach(subject => {
-      const percentages = Object.values(subject.wats)
-        .map(wat => wat.percentage)
-        .sort((a, b) => b - a); // Sort descending
+      // Sort percentages in descending order and take top 3
+      const sortedPercentages = [...subject.percentages].sort((a, b) => b - a);
+      const best3 = sortedPercentages.slice(0, 3);
       
-      // Take top 3 percentages
-      const best3 = percentages.slice(0, 3);
       subject.best3Avg = best3.length > 0
         ? Math.round(best3.reduce((sum, p) => sum + p, 0) / best3.length)
         : null;
     });
+
+    // Get all unique WAT numbers across all subjects
+    const allWatNumbers = Array.from(
+      new Set(
+        submissions.map(sub => sub.watDetails.watNumber)
+      )
+    ).sort((a, b) => a - b);
 
     return {
       subjects: Object.values(subjectMap),
@@ -181,7 +169,7 @@ export default function ViewMarks() {
               <h3 className="text-xl font-medium mb-2">No WATs Completed Yet</h3>
               <p className="text-gray-600 mb-4">You haven't completed any WATs yet.</p>
               <button 
-                onClick={() => navigate('/available-wats')}
+                onClick={() => navigate('/student/wats')}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
               >
                 View Available WATs
@@ -198,7 +186,7 @@ export default function ViewMarks() {
                       </th>
                       {watNumbers.map(num => (
                         <th key={num} className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          WAT {num}
+                           {num}
                         </th>
                       ))}
                       <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -222,7 +210,9 @@ export default function ViewMarks() {
                                     <span className="font-medium">
                                       {wat.score}
                                     </span>
-                                  
+                                    {/* <span className={`text-xs ${wat.percentage >= 5 ? 'text-green-600' : 'text-red-600'}`}>
+                                      ({wat.percentage})
+                                    </span> */}
                                   </div>
                                 ) : (
                                   <span className="text-gray-400">-</span>
@@ -231,7 +221,7 @@ export default function ViewMarks() {
                             );
                           })}
                           <td className="px-6 py-4 whitespace-nowrap text-center font-medium">
-                            {subject.best3Avg ? (
+                            {subject.best3Avg !== null ? (
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                 subject.best3Avg >= 5 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                               }`}>

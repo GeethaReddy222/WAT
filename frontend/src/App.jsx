@@ -33,6 +33,7 @@ import StudentProfileUpdate from "./pages/Student/StudentUpdate.jsx";
 import WATAttemptPage from './pages/Student/WatAttemptPage.jsx';
 import ViewMarks from "./pages/Student/ViewMarks.jsx";
 import ViewWats from "./pages/Student/ViewWats.jsx";
+import CompletedWats from "./pages/Student/CompletedWats.jsx";
 
 
 // Faculty
@@ -50,6 +51,7 @@ import FacultyWATsByYear from "./pages/Faculty/FacultyWatsByYear.jsx";
 import SectionDetails from "./pages/Faculty/SectionDetails.jsx";
 import StudentsList from "./pages/Faculty/StudentsList.jsx";
 import GenerateMCQs  from './pages/Faculty/GenerateMcqs.jsx';
+import FacultyWatResults from './pages/Faculty/FacultyWatResults.jsx';
 
 const App = () => {
   const location = useLocation();
@@ -75,6 +77,7 @@ const App = () => {
           <Route path="/student/wats" element={<ViewWats/>}/>
           <Route path="/student/wat-marks" element={<ViewMarks/>}/>
           <Route path="/wats/:id" element={<WATAttemptPage />} />
+          <Route path="/student/completed-wats" element={<CompletedWats/>} />
           
 
           {/* Faculty Routes */}
@@ -93,7 +96,7 @@ const App = () => {
           <Route path="/faculty/student-details/:year/:section" element={<StudentsList />} />
           <Route path="/faculty/students/year/:year" element={<StudentYearDetails />} />
           <Route path="/faculty/mcqs" element={<GenerateMCQs/>} />
-
+          <Route path="/faculty/wat-results/:watId" element={<FacultyWatResults />} />
 
           {/* Admin Routes */}
           <Route path="/admin-dashboard" element={<Admin />} />

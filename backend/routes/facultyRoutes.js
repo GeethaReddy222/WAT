@@ -197,6 +197,32 @@ router.post("/login", async (req, res) => {
 // });
 
 
+// router.get('/profile', authenticateToken, async (req, res) => {
+//   try {
+//     const faculty = await Faculty.findById(req.user.id)
+//       .populate('assignedSubjects.subject', 'name year') // Adjust based on your schema
+//       .select('-password -createdAt -updatedAt -__v');
+
+//     if (!faculty) {
+//       return res.status(404).json({ message: 'Faculty not found' });
+//     }
+
+//     // Format the data if needed
+//     const formattedFaculty = {
+//       ...faculty.toObject(),
+//       assignedSubjects: faculty.assignedSubjects.map(sub => ({
+//         subject: sub.subject.name,
+//         year: sub.subject.year
+//       }))
+//     };
+
+//     res.json(formattedFaculty);
+//   } catch (err) {
+//     console.error('Error fetching faculty profile:', err);
+//     res.status(500).json({ message: 'Server error' });
+//   }
+// });
+
 
 // Get faculty profile (updated)
 router.get('/profile', authenticateToken, async (req, res) => {

@@ -75,11 +75,37 @@ router.put('/:year/:semester', async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
-    const subjects = await Subject.find({});
-    res.json(subjects);
+    // Fetch all subjects from database
+    const subjects = await Subject.find().lean();
+    
+    // Organize subjects by year and semester
+    const organizedSubjects = {};
+    
+    subjects.forEach(subjectDoc => {
+      const { year, semester } = subjectDoc;
+      
+      if (!organizedSubjects[year]) {
+        organizedSubjects[year] = {
+          sem1: [],
+          sem2: []
+        };
+      }
+      
+      // Add subjects to the appropriate semester
+      organizedSubjects[year][semester] = subjectDoc.subjects.map(sub => ({
+        code: sub.code,
+        name: sub.name
+      }));
+    });
+    
+    res.status(200).json(organizedSubjects);
   } catch (error) {
     console.error('Error fetching subjects:', error);
-    res.status(500).json({ message: 'Error fetching subjects', error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch subjects',
+      error: error.message 
+    });
   }
 });
 module.exports = router;
