@@ -10,7 +10,7 @@ const watSchema = new mongoose.Schema({
   facultyId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Faculty' },
   courseName: { type: String },
   year: { type: String, required: true },//ex:E1,E2,E3
-  semester: { type: String, required: true },
+  semester: { type: String },
   watNumber: { type: String, required: true },
   subject: { type: String, required: true },
   startTime: { type: Date, required: true },  

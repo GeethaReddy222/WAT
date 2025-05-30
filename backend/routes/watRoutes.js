@@ -482,4 +482,109 @@ router.get('/wat-submissions/:watId', authenticateToken, async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+
+// Get WAT results for a student
+router.get('/results/:watId/:studentId', authenticateToken, async (req, res) => {
+  
+  try {
+    console.log("hello");
+    const { watId, studentId } = req.params;
+
+    // Verify authorization - student can only view their own results
+    if (req.user.id !== studentId && req.user.role !== 'admin') {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Not authorized to view these results' 
+      });
+    }
+
+    // Find the submission and populate basic WAT info
+    const submission = await WatSubmission.findOne({
+      watId,
+      studentId
+    }).lean();
+
+    if (!submission) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Submission not found' 
+      });
+    }
+
+    // Get the full WAT with questions to compare answers
+    const wat = await WAT.findById(watId)
+      .select('questions subject watNumber')
+      .lean();
+
+    if (!wat) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'WAT not found' 
+      });
+    }
+
+    // Create a map of questions for quick lookup
+    const questionMap = new Map();
+    wat.questions.forEach(question => {
+      questionMap.set(question._id.toString(), question);
+    });
+
+    // Process each answer to include question details and correctness
+    const detailedAnswers = submission.answers.map(answer => {
+      const question = questionMap.get(answer.questionId.toString());
+      
+      if (!question) {
+        return {
+          ...answer,
+          questionText: 'Question not found',
+          isCorrect: false,
+          correctAnswer: 'N/A'
+        };
+      }
+
+      return {
+        ...answer,
+        questionText: question.questionText,
+        options: question.options,
+        isCorrect: answer.selectedOption === question.correctAnswer,
+        correctAnswer: question.correctAnswer
+      };
+    });
+
+    // Calculate percentage score
+    const totalQuestions = wat.questions.length;
+    const percentageScore = Math.round((submission.score / totalQuestions) * 100);
+
+    // Prepare the response
+    const response = {
+      success: true,
+      data: {
+        watDetails: {
+          _id: wat._id,
+          subject: wat.subject,
+          watNumber: wat.watNumber,
+          totalQuestions
+        },
+        submissionDetails: {
+          score: submission.score,
+          percentage: percentageScore,
+          submittedAt: submission.submittedAt
+        },
+        answers: detailedAnswers
+      }
+    };
+
+    res.json(response);
+
+  } catch (error) {
+    console.error('Error fetching WAT results:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 module.exports = router;

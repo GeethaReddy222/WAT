@@ -46,6 +46,7 @@ const Navbar = () => {
             className="h-10 w-10 mr-2 rounded-full border-2 border-white"
           />
           <h1 className="text-xl font-bold">Weekly Assessment Tests</h1>
+          {/* <h1 className="text-xl font-bold text-black">Weekly Assessment <span className="text-white hover:text-white-700 transition-colors duration-300">Tests</span></h1> */}
         </div>
 
         {/* Mobile Menu Button */}

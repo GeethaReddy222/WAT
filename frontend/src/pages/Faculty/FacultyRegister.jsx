@@ -9,17 +9,41 @@ const FacultyRegister = () => {
     name: "",
     email: "",
     password: "",
-    years: [],
-    subjects: {},
     contact: "",
+    years: [],
+    subjects: new Map(), // Using Map to match your schema
   });
 
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [availableSubjects, setAvailableSubjects] = useState({});
+  const [fetchingSubjects, setFetchingSubjects] = useState(true);
+  const [selectedSemester, setSelectedSemester] = useState("sem1"); // Track selected semester
 
   const yearOptions = ["E1", "E2", "E3", "E4"];
+  const semesterOptions = ["sem1", "sem2"];
+
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const response = await fetch("http://localhost:4000/api/subjects");
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableSubjects(data);
+        } else {
+          console.error("Failed to fetch subjects");
+        }
+      } catch (error) {
+        console.error("Error fetching subjects:", error);
+      } finally {
+        setFetchingSubjects(false);
+      }
+    };
+
+    fetchSubjects();
+  }, []);
 
   useEffect(() => {
     if (isRegistered) {
@@ -38,35 +62,36 @@ const FacultyRegister = () => {
   const handleYearChange = (e) => {
     const { value, checked } = e.target;
     let newYears = [...formData.years];
-    let newSubjects = { ...formData.subjects };
+    const newSubjects = new Map(formData.subjects);
 
     if (checked) {
       newYears.push(value);
-      newSubjects[value] = [""];
+      // Initialize with empty array for the year if not exists
+      if (!newSubjects.has(value)) {
+        newSubjects.set(value, []);
+      }
     } else {
       newYears = newYears.filter((year) => year !== value);
-      delete newSubjects[value];
+      newSubjects.delete(value);
     }
 
     setFormData({ ...formData, years: newYears, subjects: newSubjects });
   };
 
-  const handleSubjectChange = (year, index, value) => {
-    const updatedSubjects = { ...formData.subjects };
-    updatedSubjects[year][index] = value;
-    setFormData({ ...formData, subjects: updatedSubjects });
-  };
+  const handleSubjectToggle = (year, subjectCode) => {
+    const newSubjects = new Map(formData.subjects);
+    const currentSubjects = newSubjects.get(year) || [];
+    const subjectIndex = currentSubjects.indexOf(subjectCode);
 
-  const addSubjectField = (year) => {
-    const updatedSubjects = { ...formData.subjects };
-    updatedSubjects[year].push("");
-    setFormData({ ...formData, subjects: updatedSubjects });
-  };
+    if (subjectIndex === -1) {
+      // Add subject if not already selected
+      newSubjects.set(year, [...currentSubjects, subjectCode]);
+    } else {
+      // Remove subject if already selected
+      newSubjects.set(year, currentSubjects.filter(code => code !== subjectCode));
+    }
 
-  const removeSubjectField = (year, index) => {
-    const updatedSubjects = { ...formData.subjects };
-    updatedSubjects[year].splice(index, 1);
-    setFormData({ ...formData, subjects: updatedSubjects });
+    setFormData({ ...formData, subjects: newSubjects });
   };
 
   const validate = () => {
@@ -83,25 +108,22 @@ const FacultyRegister = () => {
     if (formData.years.length === 0)
       newErrors.years = "*Please select at least one year";
 
-    const subjectErrors = {};
-    formData.years.forEach((year) => {
-      const subjects = formData.subjects[year] || [];
-      const errors = subjects.map((subject) =>
-        subject.trim() === "" ? "*Subject is required" : ""
-      );
-      if (errors.some((error) => error !== "")) {
-        subjectErrors[year] = errors;
+    // Check if at least one subject is selected
+    let hasSubjects = false;
+    formData.subjects.forEach(subjects => {
+      if (subjects.length > 0) {
+        hasSubjects = true;
       }
     });
+
+    if (!hasSubjects) {
+      newErrors.subjects = "*Please select at least one subject";
+    }
 
     if (!formData.contact.trim()) {
       newErrors.contact = "*Contact number is required";
     } else if (!/^\d{10}$/.test(formData.contact)) {
       newErrors.contact = "*Contact must be a valid 10-digit number";
-    }
-
-    if (Object.keys(subjectErrors).length > 0) {
-      newErrors.subjects = subjectErrors;
     }
 
     setErrors(newErrors);
@@ -113,28 +135,38 @@ const FacultyRegister = () => {
     if (validate()) {
       setLoading(true);
       try {
+        // Convert Map to object for JSON serialization
+        const subjectsObj = {};
+        formData.subjects.forEach((value, key) => {
+          subjectsObj[key] = value;
+        });
+
         const response = await fetch("http://localhost:4000/faculty/register", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify({
+            ...formData,
+            subjects: subjectsObj
+          }),
         });
-        console.log(formData);
+
         if (response.ok) {
           setIsRegistered(true);
           setFormData({
             name: "",
             email: "",
             password: "",
-            years: [],
-            subjects: {},
             contact: "",
+            years: [],
+            subjects: new Map(),
           });
           setErrors({});
           navigate("/login");
         } else {
-          console.error("Failed to register the faculty");
+          const errorData = await response.json();
+          console.error("Failed to register the faculty:", errorData.message);
         }
       } catch (error) {
         console.error("Error occurred while registering:", error);
@@ -143,6 +175,17 @@ const FacultyRegister = () => {
       }
     }
   };
+
+  if (fetchingSubjects) {
+    return (
+      <div className="flex items-center justify-center min-h-[90vh] bg-gradient-to-br from-blue-50 to-gray-100 p-4">
+        <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row justify-center items-center p-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          <p className="ml-4 text-gray-700">Loading subjects...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-[90vh] bg-gradient-to-br from-blue-50 to-gray-100 p-4">
@@ -261,39 +304,64 @@ const FacultyRegister = () => {
               {errors.years && <p className="mt-1 text-xs text-red-600">{errors.years}</p>}
             </div>
 
-            {/* Subjects */}
-            {formData.years.map((year) => (
-              <div key={year} className="mt-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Subjects for {year}:</label>
-                {formData.subjects[year].map((subject, index) => (
-                  <div key={index} className="flex items-center space-x-2 mb-2">
+            {/* Semester Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Select Semester:</label>
+              <div className="flex space-x-4">
+                {semesterOptions.map((semester) => (
+                  <label key={semester} className="flex items-center space-x-2">
                     <input
-                      type="text"
-                      value={subject}
-                      onChange={(e) => handleSubjectChange(year, index, e.target.value)}
-                      placeholder={`Subject ${index + 1}`}
-                      className={`w-full px-3 py-2 text-sm rounded-lg border ${
-                        errors.subjects?.[year]?.[index] ? 'border-red-500 animate-shake' : 'border-gray-300'
-                      } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
+                      type="radio"
+                      name="semester"
+                      value={semester}
+                      checked={selectedSemester === semester}
+                      onChange={() => setSelectedSemester(semester)}
+                      className="text-blue-600 focus:ring-blue-500"
                     />
-                    <button
-                      type="button"
-                      onClick={() => removeSubjectField(year, index)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      ×
-                    </button>
-                  </div>
+                    <span className="text-sm capitalize">
+                      {semester === "sem1" ? "Sem1" : "Sem2"}
+                    </span>
+                  </label>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => addSubjectField(year)}
-                  className="text-blue-500 hover:text-blue-700 text-sm"
-                >
-                  + Add Subject
-                </button>
               </div>
-            ))}
+            </div>
+
+            {/* Subjects Selection */}
+            {formData.years.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Select Subjects for {selectedSemester === "sem1" ? "Semester 1" : "Semester 2"}:
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {formData.years.map((year) => (
+                    <div key={year} className="space-y-2">
+                      <h3 className="text-sm font-medium text-gray-600">{year} Subjects:</h3>
+                      {availableSubjects[year]?.[selectedSemester]?.length > 0 ? (
+                        availableSubjects[year][selectedSemester].map((subject) => (
+                          <label key={subject.code} className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded">
+                            <input
+                              type="checkbox"
+                              checked={formData.subjects.get(year)?.includes(subject.name) || false}
+                              onChange={() => handleSubjectToggle(year, subject.name)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm">
+                              {subject.code} - {subject.name}
+                            </span>
+                          </label>
+                        ))
+                      ) : (
+                        <p className="text-xs text-gray-500">No subjects available for {year}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {errors.subjects && (
+              <p className="mt-1 text-xs text-red-600">{errors.subjects}</p>
+            )}
 
             {/* Contact Number */}
             <div>
@@ -335,4 +403,4 @@ const FacultyRegister = () => {
   );
 };
 
-export default FacultyRegister; 
+export default FacultyRegister;

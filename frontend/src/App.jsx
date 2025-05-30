@@ -33,6 +33,7 @@ import StudentProfileUpdate from "./pages/Student/StudentUpdate.jsx";
 import WATAttemptPage from './pages/Student/WatAttemptPage.jsx';
 import ViewMarks from "./pages/Student/ViewMarks.jsx";
 import ViewWats from "./pages/Student/ViewWats.jsx";
+import CompletedWats from "./pages/Student/CompletedWats.jsx";
 
 
 // Faculty
@@ -76,6 +77,7 @@ const App = () => {
           <Route path="/student/wats" element={<ViewWats/>}/>
           <Route path="/student/wat-marks" element={<ViewMarks/>}/>
           <Route path="/wats/:id" element={<WATAttemptPage />} />
+          <Route path="/student/completed-wats" element={<CompletedWats/>} />
           
 
           {/* Faculty Routes */}

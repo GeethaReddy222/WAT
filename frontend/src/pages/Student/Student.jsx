@@ -74,7 +74,7 @@ export default function Student() {
         <StudentSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         <div className="flex-1 max-w-4xl mx-auto p-6 mt-8">
           <h2 className="text-3xl font-bold text-center mb-6">Available WATs for {studentYear}</h2>
-          <p className="text-center text-red-500">{error}</p>
+          <p className="text-center text-500">{error}</p>
         </div>
       </div>
     );

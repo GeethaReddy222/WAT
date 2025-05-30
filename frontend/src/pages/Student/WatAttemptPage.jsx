@@ -6,6 +6,7 @@ const WATAttemptPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [wat, setWat] = useState(null);
+  const [shuffledWat, setShuffledWat] = useState(null); // Stores the shuffled version
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState([]);
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -23,16 +24,47 @@ const WATAttemptPage = () => {
   const [unattemptedCount, setUnattemptedCount] = useState(0);
   const MAX_TAB_SWITCHES = 3;
 
-  // Calculate attempted and unattempted questions
+  // Fisher-Yates shuffle algorithm
+  const shuffleArray = (array) => {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+  };
+
+  // Shuffle questions and options when WAT data is loaded
   useEffect(() => {
     if (!wat) return;
     
+    // Create a deep copy of the wat object
+    const shuffled = JSON.parse(JSON.stringify(wat));
+    
+    // Shuffle the questions array
+    shuffled.questions = shuffleArray(shuffled.questions);
+    
+    // Shuffle options for each question
+    shuffled.questions.forEach(question => {
+      question.options = shuffleArray(question.options);
+      // Keep track of the correct answer index after shuffling
+      question.originalCorrectAnswer = question.correctAnswer;
+    });
+    
+    setShuffledWat(shuffled);
+    setAnswers(Array(shuffled.questions.length).fill(null));
+  }, [wat]);
+
+  // Calculate attempted and unattempted questions
+  useEffect(() => {
+    if (!shuffledWat) return;
+    
     const attempted = answers.filter(answer => answer !== null).length;
-    const unattempted = wat.questions.length - attempted;
+    const unattempted = shuffledWat.questions.length - attempted;
     
     setAttemptedCount(attempted);
     setUnattemptedCount(unattempted);
-  }, [answers, wat]);
+  }, [answers, shuffledWat]);
 
   // Helper functions
   const toggleShowResults = () => {
@@ -40,8 +72,8 @@ const WATAttemptPage = () => {
   };
 
   const getQuestionResult = (questionId) => {
-    if (!wat || !wat.questions) return null;
-    return wat.questions.find(q => q._id === questionId);
+    if (!shuffledWat || !shuffledWat.questions) return null;
+    return shuffledWat.questions.find(q => q._id === questionId);
   };
 
   // Initialize student data from localStorage
@@ -94,7 +126,6 @@ const WATAttemptPage = () => {
         setWat(watData);
         setStartTime(start);
         setEndTime(end);
-        setAnswers(Array(watData.questions.length).fill(null));
         
         if (now > end) {
           setTestEnded(true);
@@ -115,22 +146,22 @@ const WATAttemptPage = () => {
   // Timer countdown
   useEffect(() => {
     if (testEnded || timeRemaining <= 0) return;
-
+  
     const timerId = setInterval(() => {
       setTimeRemaining(prev => {
         const newTime = prev - 1;
         if (newTime <= 0) {
           clearInterval(timerId);
           setTestEnded(true);
-          handleAutoSubmit();
+          handleAutoSubmit(); // This function needs to be in dependencies
           return 0;
         }
         return newTime;
       });
     }, 1000);
-
+  
     return () => clearInterval(timerId);
-  }, [timeRemaining, testEnded]);
+  }, [timeRemaining, testEnded]); // Missing handleAutoSubmit
 
   const handleAnswerChange = (selectedOption) => {
     const updatedAnswers = [...answers];
@@ -139,7 +170,7 @@ const WATAttemptPage = () => {
   };
 
   const goToNextQuestion = () => {
-    if (currentQuestionIndex < wat.questions.length - 1) {
+    if (currentQuestionIndex < shuffledWat.questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     }
   };
@@ -159,9 +190,10 @@ const WATAttemptPage = () => {
       const response = await axios.post('http://localhost:4000/api/wats/submit', {
         watId: wat._id,
         studentId: student.id,
-        answers: wat.questions.map((q, i) => ({
+        answers: shuffledWat.questions.map((q, i) => ({
           questionId: q._id,
-          selectedOption: answers[i]
+          selectedOption: answers[i],
+          originalCorrectAnswer: q.originalCorrectAnswer
         })),
         tabSwitches: tabSwitchCount,
         autoSubmitted: true
@@ -201,9 +233,10 @@ const WATAttemptPage = () => {
       const response = await axios.post('http://localhost:4000/api/wats/submit', {
         watId: wat._id,
         studentId: student.id,
-        answers: wat.questions.map((q, i) => ({
+        answers: shuffledWat.questions.map((q, i) => ({
           questionId: q._id,
-          selectedOption: answers[i]
+          selectedOption: answers[i],
+          originalCorrectAnswer: q.originalCorrectAnswer
         })),
         tabSwitches: tabSwitchCount,
         autoSubmitted: false
@@ -236,7 +269,7 @@ const WATAttemptPage = () => {
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (!wat) return (
+  if (!wat || !shuffledWat) return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
@@ -257,8 +290,8 @@ const WATAttemptPage = () => {
     );
   }
 
-  const currentQuestion = wat.questions[currentQuestionIndex];
-  const totalQuestions = wat.questions.length;
+  const currentQuestion = shuffledWat.questions[currentQuestionIndex];
+  const totalQuestions = shuffledWat.questions.length;
   const totalDuration = (endTime - startTime) / 1000;
   const progressPercentage = ((totalDuration - timeRemaining) / totalDuration) * 100;
 
@@ -493,11 +526,12 @@ const WATAttemptPage = () => {
                       Detailed Results
                     </h3>
                     <div className="space-y-8">
-                      {wat.questions.map((question, index) => {
-                        const questionResult = getQuestionResult(question._id);
-                        const isCorrect = questionResult?.correctAnswer === answers[index];
+                      {shuffledWat.questions.map((question, index) => {
+                       getQuestionResult(question._id);
+
+                        const isCorrect = question.originalCorrectAnswer === answers[index];
                         const studentAnswer = answers[index];
-                        const correctAnswer = questionResult?.correctAnswer;
+                        const correctAnswer = question.originalCorrectAnswer;
                         
                         return (
                           <div key={index} className="border-b pb-8 last:border-0">
@@ -597,7 +631,7 @@ const WATAttemptPage = () => {
               </div>
 
               <div className="grid grid-cols-5 gap-3 mb-6">
-                {wat.questions.map((_, index) => {
+                {shuffledWat.questions.map((_, index) => {
                   let bgColor = 'bg-red-100'; // Default for unattempted
                   let textColor = 'text-red-800';
                   

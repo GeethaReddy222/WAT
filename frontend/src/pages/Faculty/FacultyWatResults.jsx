@@ -75,7 +75,7 @@ export default function FacultyWatResults() {
     let csvContent = "data:text/csv;charset=utf-8,";
 
     // Add headers
-    csvContent += "Student ID,Roll No,Name,Email,Score\n";
+    csvContent += "Roll No,Student ID,Name,Email,Score\n";
 
     // Add data rows
     results.forEach((result) => {
